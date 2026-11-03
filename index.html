@@ -300,12 +300,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 
-const allowedDomain = "https://programming0510.github.io/korokoroball/"; 
 
-if (window.location.hostname !== allowedDomain && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-    document.body.innerHTML = "<h1 style='text-align:center; margin-top:20vh;'>コロコロボールゲームの無断転載・コピーは禁止されています。</h1>";
-    throw new Error("Unauthorized domain");
-}
 
 
 (function() {
