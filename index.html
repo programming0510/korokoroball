@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>コロコロボールゲーム - 分割画面マルチ</title>
+
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #dcedc8;
+    font-family: Arial, sans-serif;
+    user-select: none;
+}
+
+canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 10;
+    transition: opacity 0.3s ease;
+}
+
+.hidden {
+    display: none !important;
+}
+
+h1 {
+    font-size: 42px;
+    color: #222222;
+    margin-bottom: 10px;
+}
+
+p {
+    font-size: 18px;
+    color: #666666;
+    margin-bottom: 20px;
+}
+
+.btn {
+    background: #ffffff;
+    color: #333333;
+    border: 2px solid #333333;
+    padding: 12px 35px;
+    font-size: 20px;
+    font-weight: bold;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+    margin: 6px;
+}
+
+.btn:hover {
+    background: #f0f0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.level-container {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 600px;
+}
+
+.btn-level {
+    background: #ffffff;
+    color: #2196f3;
+    border: 2px solid #2196f3;
+    padding: 15px 25px;
+    font-size: 20px;
+    min-width: 100px;
+    border-radius: 15px;
+}
+
+.btn-level:hover {
+    background: #e3f2fd;
+}
+
+.color-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.color-btn {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    border: 3px solid #333;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.color-btn:hover {
+    transform: scale(1.2);
+}
+
+.news-box {
+    background: #f9f9f9;
+    border: 2px solid #ddd;
+    border-radius: 15px;
+    padding: 20px;
+    width: 80%;
+    max-width: 500px;
+    max-height: 50vh;
+    overflow-y: auto;
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.news-item {
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.news-date {
+    font-size: 14px;
+    color: #888;
+}
+
+.news-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #000000;
+}
+
+.news-text {
+    font-size: 14px;
+    color: #444;
+    margin-top: 5px;
+}
+
+#game-ui {
+    position: absolute;
+    top: 20px;
+    width: 100%;
+    text-align: center;
+    color: #333;
+    text-shadow: 1px 1px 3px rgba(255,255,255,0.8);
+    pointer-events: none;
+    z-index: 5;
+}
+
+#home-btn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    pointer-events: auto;
+    background: #ffffff;
+    color: #2196f3;
+    border: 2px solid #2196f3;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 20px;
+}
+
+#home-btn:hover {
+    background: #fff3e0;
+}
+
+
+.player-label {
+    position: absolute;
+    top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 5px 15px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.8);
+    z-index: 5;
+    display: none;
+}
+#label-1p { left: 25%; transform: translateX(-50%); color: #2196f3; }
+#label-2p { right: 25%; transform: translateX(50%); color: #ff4081; }
+</style>
+
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://unpkg.com/cannon@0.6.2/build/cannon.min.js"></script>
+</head>
+<body>
+
+<div id="logo-screen" class="overlay" onclick="showOpening()">
+    <h1 style="font-size: 52px; font-weight: bold; letter-spacing: 2px;">PRODUCTION PROGRAMMING0510</h1>
+    <p style="font-size: 14px; margin-top: 10px; color: #888;">画面をクリックしてください。</p>
+</div>
+
+<div id="opening-screen" class="overlay hidden">
+    <h1>コロコロボールゲーム</h1>
+    <p>Ⓒ2026PROGRAMMING0510</p>
+    <p>ver.1.01</p>
+    
+    <p style="font-size: 15px; margin-bottom: 5px;">1Pボールの色を選ぼう：</p>
+    <div class="color-container">
+        <div class="color-btn" style="background: #ffffff;" onclick="setBallColor(0xffffff)" title="ホワイト"></div>
+        <div class="color-btn" style="background: #ff5252;" onclick="setBallColor(0xff5252)" title="レッド"></div>
+        <div class="color-btn" style="background: #448aff;" onclick="setBallColor(0x448aff)" title="ブルー"></div>
+        <div class="color-btn" style="background: #69f0ae;" onclick="setBallColor(0x69f0ae)" title="グリーン"></div>
+        <div class="color-btn" style="background: #ffd740;" onclick="setBallColor(0xffd740)" title="イエロー"></div>
+        <div class="color-btn" style="background: #F58220;" onclick="setBallColor(0xF58220)" title="オレンジ"></div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 10px;">
+        <button class="btn" onclick="startSingleMode()">1P ソロプレイ</button>
+        <button class="btn" style="background: #ffffff; color: #000000; border-color: #000000;" onclick="startMultiMode()">マルチプレイ</button>
+    </div>
+    <button class="btn" style="font-size: 16px; padding: 10px 25px; margin-top: 5px; background: #ffffff; color: #000000; border-color: #000000;" onclick="showNewsFromOpening()">📢 ゲームニュース</button>
+</div>
+
+<div id="home-screen" class="overlay hidden">
+    <h1>LEVEL SELECT</h1>
+    <p>挑戦するレベルを選んでください</p>
+    <div class="level-container">
+        <button class="btn btn-level" onclick="startLevel(1)">LV.1</button>
+        <button class="btn btn-level" onclick="startLevel(2)">LV.2</button>
+        <button class="btn btn-level" onclick="startLevel(3)">LV.3</button>
+        <button class="btn btn-level" onclick="startLevel(4)">LV.4</button>
+        <button class="btn btn-level" onclick="startLevel(5)">LV.5</button>
+        <button class="btn" style="font-size: 16px; margin-top: 15px; width: 100%;" onclick="showOpeningFromHome()">◀ タイトルに戻る</button>
+        <b style="font-size: 12px; margin-top: 10px; width: 100%; text-align: center;">copyright PROGRAMMING0510 無断転載・コピーを禁じます。</b>
+    </div>
+</div>
+
+
+<div id="news-screen" class="overlay hidden">
+    <h1>GAME NEWS</h1>
+    <p>最新情報やアップデート情報をお知らせします</p>
+    <div class="news-box">
+        <div class="news-item">
+            
+        </div>
+    </div>
+    <button class="btn" onclick="returnToOpening()">◀ タイトルに戻る</button>
+</div>
+
+<div id="game-ui" class="hidden">
+    <button id="home-btn" class="btn" onclick="returnToHome()">◀ ホーム</button>
+    <h2 id="level-title" style="margin:0;">LEVEL 1</h2>
+</div>
+
+<div id="label-1p" class="player-label">1P (矢印キー)</div>
+<div id="label-2p" class="player-label">2P (WASD)</div>
+
+<script>
+
+(function() {
+    const detectDevTool = function() {
+        const startTime = performance.now();
+        debugger; 
+        const endTime = performance.now();
+        
+       
+        if (endTime - startTime > 100) {
+            document.body.innerHTML = "<h1 style='text-align:center; margin-top:20vh;'>解析が検知されました</h1>";
+            window.location.href = "about:blank"; 
+        }
+    };
+    
+    setInterval(detectDevTool, 500);
+})();
+
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+});
+
+
+document.addEventListener('keydown', function(e) {
+    if (
+        e.keyCode === 123 || // F12
+        (e.ctrlKey && e.shiftKey && (e.code === 'KeyI' || e.code === 'KeyJ' || e.code === 'KeyC')) || 
+        (e.ctrlKey && (e.code === 'KeyU' || e.code === 'KeyS')) 
+    ) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+
+const allowedDomain = ""; 
+
+if (window.location.hostname !== allowedDomain && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    document.body.innerHTML = "<h1 style='text-align:center; margin-top:20vh;'>コロコロボールゲームの無断転載・コピーは禁止されています。</h1>";
+    throw new Error("Unauthorized domain");
+}
+
+
+(function() {
+    const threshold = 160;
+    const checkDevTools = function() {
+        const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+        const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        
+        if (widthThreshold || heightThreshold) {
+            
+            document.body.innerHTML = "<h1 style='text-align:center; margin-top:20vh; color:#333;'>開発者ツールの使用が検知されました。　コピー防止のため開発者ツールは使用できません。</h1>";
+            throw new Error("Debugger detected");
+        }
+    };
+    
+    setInterval(checkDevTools, 1000);
+})();
+let scene, renderer, world, material;
+let camera1, camera2;           
+let ballMesh, ballBody;          
+let ballMesh2, ballBody2;        
+let meshes = [];
+let bodies = [];
+let currentLevel = 1;
+let goalZ = -40;
+let isPlaying = false;
+let isMultiplayer = false;       
+let selectedBallColor = 0xffffff;
+
+let animatedGimmicks = [];
+const boardColor = 0xdeb887;
+
+const keys = {
+    ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false,
+    KeyW: false, KeyS: false, KeyA: false, KeyD: false
+};
+
+function setBallColor(colorHex) {
+    selectedBallColor = colorHex;
+}
+
+addEventListener("keydown", (F12) => {});
+
+onkeydown = (F12) => {};
+function init() {
+    try {
+        scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0xdcedc8, 10, 80);
+
+       
+        camera1 = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        camera2 = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const light = new THREE.DirectionalLight(0xffffff, 0.8);
+        light.position.set(10, 20, 10);
+        light.castShadow = true;
+        scene.add(light);
+
+        world = new CANNON.World();
+        world.gravity.set(0, -9.82, 0);
+
+        material = new CANNON.Material("standard");
+        world.addContactMaterial(new CANNON.ContactMaterial(
+            material, material, { friction: 0.1, restitution: 0.2 }
+        ));
+
+        window.addEventListener("keydown", (e) => { if (keys.hasOwnProperty(e.code)) keys[e.code] = true; });
+        window.addEventListener("keyup", (e) => { if (keys.hasOwnProperty(e.code)) keys[e.code] = false; });
+        window.addEventListener("resize", onWindowResize);
+
+        animate();
+    } catch (e) {
+        console.error("初期化エラー:", e);
+        alert("ゲームの読み込みに失敗しました。");
+    }
+}
+
+function createBox(x, y, z, w, h, d, color, isKinematic = false) {
+    const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color })
+    );
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+
+    const body = new CANNON.Body({
+        mass: 0,
+        material: material,
+        type: isKinematic ? CANNON.Body.KINEMATIC : CANNON.Body.STATIC
+    });
+    body.addShape(new CANNON.Box(new CANNON.Vec3(w / 2, h / 2, d / 2)));
+    body.position.set(x, y, z);
+    world.addBody(body);
+
+    meshes.push(mesh);
+    bodies.push(body);
+    return body;
+}
+
+function createBalls() {
+    const radius = 0.5;
+
+    ballMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 32, 32),
+        new THREE.MeshStandardMaterial({ color: selectedBallColor })
+    );
+    ballMesh.castShadow = true;
+    const wire = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 16, 16),
+        new THREE.MeshBasicMaterial({ wireframe: true, color: 0x000000 })
+    );
+    ballMesh.add(wire);
+    scene.add(ballMesh);
+
+    ballBody = new CANNON.Body({
+        mass: 1,
+        material: material,
+        position: new CANNON.Vec3(isMultiplayer ? -0.8 : 0, 5, 0)
+    });
+    ballBody.addShape(new CANNON.Sphere(radius));
+    ballBody.linearDamping = 0.4;
+    ballBody.angularDamping = 0.4;
+    world.addBody(ballBody);
+
+    meshes.push(ballMesh);
+    bodies.push(ballBody);
+
+    if (isMultiplayer) {
+        ballMesh2 = new THREE.Mesh(
+            new THREE.SphereGeometry(radius, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0xff4081 })
+        );
+        ballMesh2.castShadow = true;
+        const wire2 = new THREE.Mesh(
+            new THREE.SphereGeometry(radius, 16, 16),
+            new THREE.MeshBasicMaterial({ wireframe: true, color: 0x000000 })
+        );
+        ballMesh2.add(wire2);
+        scene.add(ballMesh2);
+
+        ballBody2 = new CANNON.Body({
+            mass: 1,
+            material: material,
+            position: new CANNON.Vec3(0.8, 5, 0)
+        });
+        ballBody2.addShape(new CANNON.Sphere(radius));
+        ballBody2.linearDamping = 0.4;
+        ballBody2.angularDamping = 0.4;
+        world.addBody(ballBody2);
+
+        meshes.push(ballMesh2);
+        bodies.push(ballBody2);
+    }
+}
+
+function clearWorld() {
+    for (let mesh of meshes) scene.remove(mesh);
+    for (let body of bodies) world.remove(body);
+    meshes = [];
+    bodies = [];
+    animatedGimmicks = [];
+    ballMesh2 = null;
+    ballBody2 = null;
+}
+
+function buildLevel(lvl) {
+    clearWorld();
+    createBalls();
+
+    if (lvl === 1) {
+        createBox(0, -0.5, 0, 6, 1, 10, boardColor);
+        createBox(0, -0.5, -10, 14, 1, 12, boardColor);
+        createBox(0, -0.5, -26, 6, 1, 20, boardColor);
+        createBox(0, -0.5, -41, 12, 1, 10, 0xffd700);
+        const obstacle = createBox(0, 0.5, -10, 10, 1, 1, 0xff3333, true);
+        obstacle.angularVelocity.set(0, 2.5, 0);
+        goalZ = -41;
+    } else if (lvl === 2) {
+        createBox(0, -0.5, 0, 6, 1, 10, boardColor);
+        createBox(0, -0.5, -10, 6, 1, 10, boardColor);
+        const bar1 = createBox(0, 0.5, -15, 10, 1, 1, 0xff3333, true);
+        bar1.angularVelocity.set(0, 3, 0);
+        createBox(0, -0.5, -20, 10, 1, 6, boardColor);
+        createBox(0, -0.5, -25, 10, 1, 10, boardColor);
+        createBox(0, -0.5, -37, 6, 1, 14, boardColor);
+        const bar2 = createBox(0, 0.5, -37, 12, 1, 1, 0x00ff66, true);
+        bar2.angularVelocity.set(0, -2, 0);
+        const movingPlatform = createBox(0, -0.5, -52, 10, 1, 10, 0x2196f3, true);
+        animatedGimmicks.push({ type: 'swing', body: movingPlatform, speed: 0.0015, range: 1.5, velMult: 4.5 });
+        createBox(0, -0.5, -62, 8, 1, 10, boardColor);
+        createBox(0, -0.5, -74, 12, 1, 10, 0xffd700);
+        goalZ = -74;
+    } else if (lvl === 3) {
+        createBox(0, -0.5, 0, 6, 1, 10, boardColor);
+        createBox(0, -0.5, -10, 6, 1, 10, boardColor);
+        const bar1 = createBox(0, 0.5, -15, 10, 1, 1, 0xff3333, true);
+        bar1.angularVelocity.set(0, 3, 0);
+        createBox(0, -0.5, -20, 10, 1, 6, boardColor);
+        createBox(0, -0.5, -25, 10, 1, 10, boardColor);
+        createBox(0, -1, -37, 12, -2, 20, boardColor);
+        const bar2 = createBox(0, 0.5, -37, 8, 2, 2, 0x00ff66, true);
+        bar2.angularVelocity.set(0, 100, 0);
+        const movingPlatform = createBox(0, -0.5, -52, 10, 1, 10, 0x2196f3, true);
+        animatedGimmicks.push({ type: 'fastSwing', body: movingPlatform });
+        createBox(0, -0.5, -62, 8, 1, 10, boardColor);
+        createBox(0, -0.5, -74, 12, 1, 10, 0xffd700);
+        goalZ = -74;
+    } else if (lvl === 4) {
+        createBox(0, -0.5, 0, 6, 1, 10, boardColor);
+        createBox(0, -0.5, -12, 5, 1, 12, boardColor);
+        const b1 = createBox(0, 0.5, -12, 8, 1, 1, 0xff3333, true);
+        b1.angularVelocity.set(0, 4, 0);
+        createBox(0, -0.5, -26, 4, 1, 14, boardColor);
+        const b2 = createBox(0, 0.5, -26, 8, 1, 1, 0x00ff66, true);
+        b2.angularVelocity.set(0, -5, 0);
+        const p1 = createBox(0, -0.5, -40, 8, 1, 10, 0x2196f3, true);
+        animatedGimmicks.push({ type: 'swing', body: p1, speed: 0.002, range: 4, velMult: 8 });
+        createBox(0, -0.5, -54, 6, 1, 10, boardColor);
+        createBox(0, -0.5, -68, 12, 1, 10, 0xffd700);
+        goalZ = -68;
+    } else if (lvl === 5) {
+        createBox(0, -0.5, 0, 6, 1, 10, boardColor);
+        createBox(0, -0.5, -12, 6, 1, 10, boardColor);
+        const bar1_1 = createBox(0, 0.5, -10, 8, 1, 1, 0xff3333, true);
+        bar1_1.angularVelocity.set(0, 5, 0);
+        const bar1_2 = createBox(0, 0.5, -14, 8, 1, 1, 0xff3333, true);
+        bar1_2.angularVelocity.set(0, -5, 0);
+        createBox(0, -0.5, -22, 5, 1, 6, boardColor);
+        const rotatingBridge = createBox(0, -0.5, -34, 4, 0.8, 14, boardColor, true);
+        rotatingBridge.angularVelocity.set(0, 0, 1.5);
+        createBox(0, -0.5, -46, 8, 1, 6, boardColor);
+        const elevator = createBox(0, -0.5, -57, 7, 1, 8, 0x2196f3, true);
+        animatedGimmicks.push({ type: 'elevator', body: elevator });
+        createBox(0, -0.5, -69, 8, 1, 12, boardColor);
+        const giantBar = createBox(0, 1, -69, 14, 1.5, 1.5, 0x00ff66, true);
+        giantBar.angularVelocity.set(0, 8, 0);
+        const movingPlatform = createBox(0, -0.5, -83, 8, 1, 12, 0x2196f3, true);
+        animatedGimmicks.push({ type: 'fastPlatform', body: movingPlatform });
+        createBox(0, -0.5, -97, 6, 1, 10, boardColor);
+        createBox(0, -0.5, -112, 12, 1, 10, 0xffd700);
+        goalZ = -112;
+    }
+}
+
+function showOpening() {
+    document.getElementById("logo-screen").classList.add("hidden");
+    document.getElementById("opening-screen").classList.remove("hidden");
+}
+
+function showOpeningFromHome() {
+    document.getElementById("home-screen").classList.add("hidden");
+    document.getElementById("opening-screen").classList.remove("hidden");
+}
+
+function startSingleMode() {
+    isMultiplayer = false;
+    document.getElementById("opening-screen").classList.add("hidden");
+    document.getElementById("home-screen").classList.remove("hidden");
+    document.getElementById("mode-title-select").innerText = "SOLO PLAY - LEVEL SELECT";
+    document.getElementById("mode-desc-select").innerText = "1P: 矢印キーで操作";
+}
+
+function startMultiMode() {
+    isMultiplayer = true;
+    document.getElementById("opening-screen").classList.add("hidden");
+    document.getElementById("home-screen").classList.remove("hidden");
+    document.getElementById("mode-title-select").innerText = "MULTI PLAY - LEVEL SELECT";
+    document.getElementById("mode-desc-select").innerText = "1P:矢印キー / 2P:WASDキー（左右分割画面）";
+}
+
+function showNewsFromOpening() {
+    document.getElementById("opening-screen").classList.add("hidden");
+    document.getElementById("news-screen").classList.remove("hidden");
+}
+
+function returnToOpening() {
+    document.getElementById("news-screen").classList.add("hidden");
+    document.getElementById("opening-screen").classList.remove("hidden");
+}
+
+function startLevel(lvl) {
+    currentLevel = lvl;
+    document.getElementById("home-screen").classList.add("hidden");
+    document.getElementById("game-ui").classList.remove("hidden");
+    document.getElementById("level-title").innerText = isMultiplayer ? `LEVEL ${lvl} (2分割マルチ)` : `LEVEL ${lvl}`;
+
+    if (isMultiplayer) {
+        document.getElementById("label-1p").style.display = "block";
+        document.getElementById("label-2p").style.display = "block";
+    } else {
+        document.getElementById("label-1p").style.display = "none";
+        document.getElementById("label-2p").style.display = "none";
+    }
+
+    buildLevel(lvl);
+    isPlaying = true;
+}
+
+function returnToHome() {
+    isPlaying = false;
+    document.getElementById("game-ui").classList.add("hidden");
+    document.getElementById("label-1p").style.display = "none";
+    document.getElementById("label-2p").style.display = "none";
+    document.getElementById("home-screen").classList.remove("hidden");
+}
+
+const timeStep = 1 / 60;
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (isPlaying && ballBody) {
+        const force = (currentLevel >= 4) ? 25 : 12;
+
+        if (keys.ArrowUp) ballBody.applyForce(new CANNON.Vec3(0, 0, -force), ballBody.position);
+        if (keys.ArrowDown) ballBody.applyForce(new CANNON.Vec3(0, 0, force), ballBody.position);
+        if (keys.ArrowLeft) ballBody.applyForce(new CANNON.Vec3(-force, 0, 0), ballBody.position);
+        if (keys.ArrowRight) ballBody.applyForce(new CANNON.Vec3(force, 0, 0), ballBody.position);
+
+        if (isMultiplayer && ballBody2) {
+            if (keys.KeyW) ballBody2.applyForce(new CANNON.Vec3(0, 0, -force), ballBody2.position);
+            if (keys.KeyS) ballBody2.applyForce(new CANNON.Vec3(0, 0, force), ballBody2.position);
+            if (keys.KeyA) ballBody2.applyForce(new CANNON.Vec3(-force, 0, 0), ballBody2.position);
+            if (keys.KeyD) ballBody2.applyForce(new CANNON.Vec3(force, 0, 0), ballBody2.position);
+        }
+
+        const time = Date.now();
+        const sec = time * 0.002;
+
+        for (let g of animatedGimmicks) {
+            if (g.type === 'swing') {
+                g.body.position.x = Math.sin(time * g.speed) * g.range;
+                g.body.velocity.set(Math.cos(time * g.speed) * g.velMult, 0, 0);
+            } else if (g.type === 'fastSwing') {
+                g.body.position.x = Math.sin(time * 10) * 6;
+                g.body.velocity.set(Math.cos(time * 0.0015) * 10, 0, 0);
+            } else if (g.type === 'elevator') {
+                g.body.position.y = -0.5 + Math.sin(sec * 1.5) * 4;
+                g.body.velocity.set(0, Math.cos(sec * 1.5) * 6, 0);
+            } else if (g.type === 'fastPlatform') {
+                g.body.position.x = Math.sin(sec * 2) * 7;
+                g.body.velocity.set(Math.cos(sec * 2) * 14, 0, 0);
+            }
+        }
+
+        world.step(timeStep);
+
+        for (let i = 0; i < meshes.length; i++) {
+            meshes[i].position.copy(bodies[i].position);
+            meshes[i].quaternion.copy(bodies[i].quaternion);
+        }
+
+        
+        if (isMultiplayer && ballMesh2) {
+            camera1.position.x = ballMesh.position.x;
+            camera1.position.y = ballMesh.position.y + 4;
+            camera1.position.z = ballMesh.position.z + 7;
+            camera1.lookAt(ballMesh.position);
+
+            camera2.position.x = ballMesh2.position.x;
+            camera2.position.y = ballMesh2.position.y + 4;
+            camera2.position.z = ballMesh2.position.z + 7;
+            camera2.lookAt(ballMesh2.position);
+        } else {
+            camera1.position.x = ballMesh.position.x;
+            camera1.position.y = ballMesh.position.y + 4;
+            camera1.position.z = ballMesh.position.z + 7;
+            camera1.lookAt(ballMesh.position);
+        }
+
+        if (ballBody.position.y < -12) {
+            ballBody.position.set(isMultiplayer ? -0.8 : 0, 5, 0);
+            ballBody.velocity.set(0, 0, 0);
+            ballBody.angularVelocity.set(0, 0, 0);
+        }
+        if (isMultiplayer && ballBody2 && ballBody2.position.y < -12) {
+            ballBody2.position.set(0.8, 5, 0);
+            ballBody2.velocity.set(0, 0, 0);
+            ballBody2.angularVelocity.set(0, 0, 0);
+        }
+
+        if (ballBody.position.z < goalZ - 2 || (isMultiplayer && ballBody2 && ballBody2.position.z < goalZ - 2)) {
+            alert(`🎉 LEVEL ${currentLevel} クリア！おめでとう！ 🎉`);
+            ballBody.position.set(isMultiplayer ? -0.8 : 0, 5, 0);
+            ballBody.velocity.set(0, 0, 0);
+            ballBody.angularVelocity.set(0, 0, 0);
+            if (isMultiplayer && ballBody2) {
+                ballBody2.position.set(0.8, 5, 0);
+                ballBody2.velocity.set(0, 0, 0);
+                ballBody2.angularVelocity.set(0, 0, 0);
+            }
+        }
+    }
+
+    
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    renderer.clear();
+
+    if (isMultiplayer && ballMesh2) {
+        
+        renderer.setViewport(0, 0, width / 2, height);
+        renderer.setScissor(0, 0, width / 2, height);
+        renderer.setScissorTest(true);
+        camera1.aspect = (width / 2) / height;
+        camera1.updateProjectionMatrix();
+        renderer.render(scene, camera1);
+
+        
+        renderer.setViewport(width / 2, 0, width / 2, height);
+        renderer.setScissor(width / 2, 0, width / 2, height);
+        renderer.setScissorTest(true);
+        camera2.aspect = (width / 2) / height;
+        camera2.updateProjectionMatrix();
+        renderer.render(scene, camera2);
+    } else {
+       
+        renderer.setViewport(0, 0, width, height);
+        renderer.setScissor(0, 0, width, height);
+        renderer.setScissorTest(false);
+        camera1.aspect = width / height;
+        camera1.updateProjectionMatrix();
+        renderer.render(scene, camera1);
+    }
+}
+
+function onWindowResize() {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+window.onload = () => { init(); };
+</script>
+</body>
+</html>
