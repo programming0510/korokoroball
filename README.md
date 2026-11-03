@@ -6,7 +6,7 @@ javascrpit、htmlでつくったゲームです。
 
 # ライセンス（利用規約）
 
-© 2026 [programming0510]. All rights reserved.
+© 2026 programming0510. All rights reserved.
 
 # 許可していないこと（禁止事項）
 - このゲームのプログラムコードの**複製（コピー）**
